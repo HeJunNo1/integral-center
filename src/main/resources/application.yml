@@ -1,0 +1,91 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /${spring.application.name}
+
+spring:
+  application:
+    name: integral
+
+#  datasource:
+#    druid:
+#      driver-class-name: com.mysql.cj.jdbc.Driver
+#      url: jdbc:mysql://localhost:3306/integral
+#      username: root
+#      password: 123456
+
+  main:
+    allow-bean-definition-overriding: true
+
+  shardingsphere:
+    datasource:
+      names: ds0
+      ds0:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.mysql.jdbc.Driver
+        url: jdbc:mysql://localhost:3306/integral
+        username: root
+        password: 123456
+        initial-size: 10
+        max-active: 100
+        min-idle: 10
+        max-wait: 6000
+        pool-prepared-statements: true
+        max-pool-prepared-statement-per-connection-size: 20
+        time-between-eviction-runs-millis: 60000
+        min-evictable-idle-time-millis: 300000
+        validation-query: SELECT 1
+        test-while-idle: true
+        test-on-borrow: false
+        test-on-return: false
+
+    sharding:
+      tables:
+        integral_detail_log:
+          actual-data-nodes: ds0.integral_detail_log_$->{0..1}
+          table-strategy:
+            inline:
+              sharding-column: user_id
+              algorithm-expression: integral_detail_log_$->{Math.abs(user_id.hashCode()) % 2}
+
+        integral_decrease_log:
+          actual-data-nodes: ds0.integral_decrease_log_$->{0..1}
+          table-strategy:
+            inline:
+              sharding-column: order_id
+              algorithm-expression: integral_decrease_log_$->{Math.abs(order_id.hashCode()) % 2}
+
+  redis:
+    host: localhost
+    database: 6
+    port: 6379
+    jedis:
+      pool:
+        max-active: 1000
+        max-wait: 1000
+
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  #实体扫描，多个package用逗号或者分号分隔 com.example.*.entity
+  typeAliasesPackage: com.junhe.integral..*.entity
+  global-config:
+  #数据库相关配置
+    db-config:
+    #主键类型 AUTO:"数据库ID自增", INPUT:"用户输入ID", ID_WORKER:"全局唯一ID (数字类型唯一ID)", UUID:"全局唯一ID UUID";
+      id-type: ID_WORKER
+      logic-delete-value: -1
+      logic-not-delete-value: 0
+#原生配置
+  configuration:
+    #开启sql日志
+    #log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    # 该配置就是将带有下划线的表字段映射为驼峰格式的实体类属性
+    map-underscore-to-camel-case: true
+
+
+management:
+  health:
+    db:
+      enabled: false
